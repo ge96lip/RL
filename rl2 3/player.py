@@ -134,7 +134,6 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         self.annealing_timesteps = self.settings.annealing_timesteps
         self.threshold = self.settings.threshold
         self.episode_max = self.settings.episode_max
-
         q = self.q_learning()
 
         # compute policy
@@ -157,7 +156,7 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         self.allowed_movements()
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
         # Initialize a numpy array with ns state rows and na state columns with float values from 0.0 to 1.0.
-        Q = None
+        Q = np.zeros((ns, na)) # np.random.random((ns, na)) #
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
 
         for s in range(ns):
@@ -165,6 +164,7 @@ class PlayerControllerRL(PlayerController, FishesModelling):
             for i in range(4):
                 if i not in list_pos:
                     Q[s, i] = np.nan
+
 
         Q_old = Q.copy()
 
@@ -182,8 +182,10 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
         # Change the while loop to incorporate a threshold limit, to stop training when the mean difference
         # in the Q table is lower than the threshold
-        while episode <= self.episode_max:
+        while episode <= self.episode_max and diff > self.threshold:
             # ADD YOUR CODE SNIPPET BETWEENEX. 2.3
+
+            # Save the current Q table as the previous Q table for the next iteration
 
             s_current = init_pos
             R_total = 0
@@ -191,14 +193,16 @@ class PlayerControllerRL(PlayerController, FishesModelling):
             while not end_episode:
                 # selection of action
                 list_pos = self.allowed_moves[s_current]
-
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
                 # Chose an action from all possible actions
                 action = None
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
 
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
-                # Use the epsilon greedy algorithm to retrieve an action
+                # Use the epsilon greedy algorithm to retrieve an action            
+            
+                action = np.nanargmax(Q[s_current])
+
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
 
                 # compute reward
@@ -216,6 +220,9 @@ class PlayerControllerRL(PlayerController, FishesModelling):
 
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
                 # Implement the Bellman Update equation to update Q
+                Q[s_current][action] += lr * (R + discount * np.nanmax(Q[s_next]) - Q[s_current][action])
+
+                
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
 
                 s_current = s_next
@@ -224,7 +231,8 @@ class PlayerControllerRL(PlayerController, FishesModelling):
 
             # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
             # Compute the absolute value of the mean between the Q and Q-old
-            diff = 100
+            #diff = np.nanmean(np.abs(Q - Q_old))
+            diff = np.absolute(np.nanmean(Q - Q_old))
             # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
             Q_old[:] = Q
             print(
