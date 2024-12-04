@@ -15,7 +15,7 @@ player_type: "ai_rl"
 alpha: 0.3
 
 ## Q learning discount rate
-gamma: 0.9
+gamma: 0.96
 
 # Disables the graphical engine of the simulator (true by default)
 headless: true

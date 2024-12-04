@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import random
 import numpy as np
 
 from agent import Fish
@@ -85,7 +84,7 @@ class PlayerControllerHuman(PlayerController):
             if msg["game_over"]:
                 return
 
-"""
+
 def epsilon_greedy(Q,
                    state,
                    all_actions,
@@ -95,61 +94,24 @@ def epsilon_greedy(Q,
                    anneal_timesteps=10000,
                    eps_type="constant", 
                    scheduler = None):
-    if eps_type not in ["constant", "linear"]: 
-        raise "Epsilon greedy type unknown"
+
+    # Implemenmt the epsilon-greedy algorithm for a linear epsilon value
+    # Use epsilon and all input arguments of epsilon_greedy you see fit
+    if eps_type not in ["constant", "linear"]:
+        raise "Not implemented eps_type"
     
-    if eps_type == 'linear':
-        if scheduler is None: 
-            raise "Scheduler needs to be provided with eps_type linear."
-        # ADD YOUR CODE SNIPPET BETWEENEX  4.2
-        # Implemenmt the epsilon-greedy algorithm for a linear epsilon value
-        # Use epsilon and all input arguments of epsilon_greedy you see fit
-        # use the ScheduleLinear class
-        # It is recommended you use the np.random module
-        epsilon_final = scheduler.value(current_total_steps)
-        
-    if  np.random.uniform(0, 1) < epsilon_final: 
-        action = np.random.choice(all_actions)
-    else: 
-        action = np.nanargmax(Q[state])
-        # ADD YOUR CODE SNIPPET BETWEENEX  4.2
-
-    return action
-"""
-def epsilon_greedy(Q,
-                   state,
-                   all_actions,
-                   current_total_steps=0,
-                   epsilon_initial=1,
-                   epsilon_final=0.2,
-                   anneal_timesteps=10000,
-                   eps_type="constant"):
-
     if eps_type == 'constant':
         epsilon = epsilon_final
-        # Implemenmt the epsilon-greedy algorithm for a constant epsilon value
-        # Use epsilon and all input arguments of epsilon_greedy you see fit
-        # It is recommended you use the np.random module
-        if np.random.uniform(0,1) < epsilon:
-            action = np.random.choice(all_actions)
-        else:
-            action = np.nanargmax(Q[state])
 
-    elif eps_type == 'linear':
-        # Implemenmt the epsilon-greedy algorithm for a linear epsilon value
-        # Use epsilon and all input arguments of epsilon_greedy you see fit
-        # use the ScheduleLinear class
-        # It is recommended you use the np.random module
-        scheduler = ScheduleLinear(anneal_timesteps, epsilon_final, epsilon_initial)
+    else: 
+        if scheduler is None: 
+            raise "Scheduler can't be None"
         epsilon = scheduler.value(current_total_steps)
-
-        if np.random.uniform(0,1) < epsilon:
-            action = np.random.choice(all_actions)
-        else:
-            action = np.nanargmax(Q[state])
-
+        
+    if np.random.rand() < epsilon:
+        action = np.random.choice(all_actions)
     else:
-        raise "Epsilon greedy type unknown"
+        action = np.nanargmax(Q[state])
 
     return action
 
@@ -192,7 +154,7 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         self.allowed_movements()
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
         # Initialize a numpy array with ns state rows and na state columns with float values from 0.0 to 1.0.
-        Q = np.zeros((ns, na))
+        Q = np.random.rand(ns, na)# Q = np.random.uniform(low=0.0, high=1.0, size=(ns, na))
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
 
         for s in range(ns):
@@ -203,7 +165,7 @@ class PlayerControllerRL(PlayerController, FishesModelling):
 
         Q_old = Q.copy()
 
-        diff = np.infty
+        diff = float('inf')
         end_episode = False
 
         init_pos_tuple = self.settings.init_pos_diver
@@ -213,9 +175,10 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         R_total = 0
         current_total_steps = 0
         steps = 0
-        
+
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
-        scheduler = ScheduleLinear(self.annealing_timesteps, self.epsilon_final, self.epsilon_initial)
+        scheduler_epsilon = ScheduleLinear(self.annealing_timesteps, self.epsilon_final, self.epsilon_initial)
+        scheduler_lr = ScheduleLinear(self.annealing_timesteps, self.alpha)
         # Change the while loop to incorporate a threshold limit, to stop training when the mean difference
         # in the Q table is lower than the threshold
         while episode <= self.episode_max and diff > self.threshold:
@@ -230,12 +193,11 @@ class PlayerControllerRL(PlayerController, FishesModelling):
 
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
                 # Chose an action from all possible actions
+                action = epsilon_greedy(Q, s_current, list_pos, current_total_steps, self.epsilon_initial, self.epsilon_final, self.annealing_timesteps, "linear", scheduler_epsilon)
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
 
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
                 # Use the epsilon greedy algorithm to retrieve an action
-                # action = epsilon_greedy(Q, s_current, list_pos,current_total_steps=current_total_steps, eps_type = "linear", scheduler=scheduler)
-                action = epsilon_greedy(Q, s_current, list_pos, current_total_steps, self.epsilon_initial, self.epsilon_final, self.annealing_timesteps, "linear")
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
 
                 # compute reward
@@ -253,6 +215,8 @@ class PlayerControllerRL(PlayerController, FishesModelling):
 
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
                 # Implement the Bellman Update equation to update Q
+                
+                lr = scheduler_lr.value(steps)
                 Q[s_current][action] += lr * (R + discount * np.nanmax(Q[s_next]) - Q[s_current][action])
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
 
@@ -392,4 +356,3 @@ class ScheduleLinear(object):
             # Linear interpolation
             fraction = t / self.schedule_timesteps
             return self.initial_p + fraction * (self.final_p - self.initial_p)
-        # ADD YOUR CODE SNIPPET BETWEEN EX 4.2

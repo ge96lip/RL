@@ -85,37 +85,7 @@ class PlayerControllerHuman(PlayerController):
             if msg["game_over"]:
                 return
 
-"""
-def epsilon_greedy(Q,
-                   state,
-                   all_actions,
-                   current_total_steps=0,
-                   epsilon_initial=1,
-                   epsilon_final=0.2,
-                   anneal_timesteps=10000,
-                   eps_type="constant", 
-                   scheduler = None):
-    if eps_type not in ["constant", "linear"]: 
-        raise "Epsilon greedy type unknown"
-    
-    if eps_type == 'linear':
-        if scheduler is None: 
-            raise "Scheduler needs to be provided with eps_type linear."
-        # ADD YOUR CODE SNIPPET BETWEENEX  4.2
-        # Implemenmt the epsilon-greedy algorithm for a linear epsilon value
-        # Use epsilon and all input arguments of epsilon_greedy you see fit
-        # use the ScheduleLinear class
-        # It is recommended you use the np.random module
-        epsilon_final = scheduler.value(current_total_steps)
-        
-    if  np.random.uniform(0, 1) < epsilon_final: 
-        action = np.random.choice(all_actions)
-    else: 
-        action = np.nanargmax(Q[state])
-        # ADD YOUR CODE SNIPPET BETWEENEX  4.2
 
-    return action
-"""
 def epsilon_greedy(Q,
                    state,
                    all_actions,
@@ -127,26 +97,21 @@ def epsilon_greedy(Q,
 
     if eps_type == 'constant':
         epsilon = epsilon_final
+        # ADD YOUR CODE SNIPPET BETWEEN EX 4.1
         # Implemenmt the epsilon-greedy algorithm for a constant epsilon value
         # Use epsilon and all input arguments of epsilon_greedy you see fit
         # It is recommended you use the np.random module
-        if np.random.uniform(0,1) < epsilon:
-            action = np.random.choice(all_actions)
-        else:
-            action = np.nanargmax(Q[state])
+        action = None
+        # ADD YOUR CODE SNIPPET BETWEEN EX 4.1
 
     elif eps_type == 'linear':
+        # ADD YOUR CODE SNIPPET BETWEENEX  4.2
         # Implemenmt the epsilon-greedy algorithm for a linear epsilon value
         # Use epsilon and all input arguments of epsilon_greedy you see fit
         # use the ScheduleLinear class
         # It is recommended you use the np.random module
-        scheduler = ScheduleLinear(anneal_timesteps, epsilon_final, epsilon_initial)
-        epsilon = scheduler.value(current_total_steps)
-
-        if np.random.uniform(0,1) < epsilon:
-            action = np.random.choice(all_actions)
-        else:
-            action = np.nanargmax(Q[state])
+        action = None
+        # ADD YOUR CODE SNIPPET BETWEENEX  4.2
 
     else:
         raise "Epsilon greedy type unknown"
@@ -169,7 +134,6 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         self.annealing_timesteps = self.settings.annealing_timesteps
         self.threshold = self.settings.threshold
         self.episode_max = self.settings.episode_max
-
         q = self.q_learning()
 
         # compute policy
@@ -192,7 +156,7 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         self.allowed_movements()
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
         # Initialize a numpy array with ns state rows and na state columns with float values from 0.0 to 1.0.
-        Q = np.zeros((ns, na))
+        Q = np.zeros((ns, na)) # np.random.random((ns, na)) #
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
 
         for s in range(ns):
@@ -201,9 +165,10 @@ class PlayerControllerRL(PlayerController, FishesModelling):
                 if i not in list_pos:
                     Q[s, i] = np.nan
 
+
         Q_old = Q.copy()
 
-        diff = np.infty
+        diff = float('inf')
         end_episode = False
 
         init_pos_tuple = self.settings.init_pos_diver
@@ -213,13 +178,14 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         R_total = 0
         current_total_steps = 0
         steps = 0
-        
+
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
-        scheduler = ScheduleLinear(self.annealing_timesteps, self.epsilon_final, self.epsilon_initial)
         # Change the while loop to incorporate a threshold limit, to stop training when the mean difference
         # in the Q table is lower than the threshold
         while episode <= self.episode_max and diff > self.threshold:
             # ADD YOUR CODE SNIPPET BETWEENEX. 2.3
+
+            # Save the current Q table as the previous Q table for the next iteration
 
             s_current = init_pos
             R_total = 0
@@ -227,15 +193,16 @@ class PlayerControllerRL(PlayerController, FishesModelling):
             while not end_episode:
                 # selection of action
                 list_pos = self.allowed_moves[s_current]
-
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
                 # Chose an action from all possible actions
+                action = None
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
 
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
-                # Use the epsilon greedy algorithm to retrieve an action
-                # action = epsilon_greedy(Q, s_current, list_pos,current_total_steps=current_total_steps, eps_type = "linear", scheduler=scheduler)
-                action = epsilon_greedy(Q, s_current, list_pos, current_total_steps, self.epsilon_initial, self.epsilon_final, self.annealing_timesteps, "linear")
+                # Use the epsilon greedy algorithm to retrieve an action            
+                
+                action = np.nanargmax(Q[s_current])
+
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
 
                 # compute reward
@@ -254,6 +221,8 @@ class PlayerControllerRL(PlayerController, FishesModelling):
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
                 # Implement the Bellman Update equation to update Q
                 Q[s_current][action] += lr * (R + discount * np.nanmax(Q[s_next]) - Q[s_current][action])
+
+                
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
 
                 s_current = s_next
@@ -262,7 +231,8 @@ class PlayerControllerRL(PlayerController, FishesModelling):
 
             # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
             # Compute the absolute value of the mean between the Q and Q-old
-            diff = np.abs(np.nanmean(Q - Q_old))
+            #diff = np.nanmean(np.abs(Q - Q_old))
+            diff = np.absolute(np.nanmean(Q - Q_old))
             # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
             Q_old[:] = Q
             print(
@@ -318,9 +288,9 @@ class PlayerControllerRandom(PlayerController):
         steps = 0
         current_total_steps = 0
         end_episode = False
-
+        # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
         # Initialize a numpy array with ns state rows and na state columns with zeros
-        n = np.zeros((ns, na))
+        # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
 
         while episode <= self.episode_max:
             s_current = init_pos
@@ -330,9 +300,10 @@ class PlayerControllerRandom(PlayerController):
                 # all possible actions
                 possible_actions = self.allowed_moves[s_current]
 
+                # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
                 # Chose an action from all possible actions and add to the counter of actions per state
-                action = np.random.choice(possible_actions)
-                n[s_current, action] += 1
+                action = None
+                # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
 
                 action_str = self.action_list[action]
                 msg = {"action": action_str, "exploration": True}
@@ -386,10 +357,5 @@ class ScheduleLinear(object):
     def value(self, t):
         # ADD YOUR CODE SNIPPET BETWEEN EX 4.2
         # Return the annealed linear value
-        if t >= self.schedule_timesteps:
-            return self.final_p  # After annealing, return the final value
-        else:
-            # Linear interpolation
-            fraction = t / self.schedule_timesteps
-            return self.initial_p + fraction * (self.final_p - self.initial_p)
+        return self.initial_p
         # ADD YOUR CODE SNIPPET BETWEEN EX 4.2
